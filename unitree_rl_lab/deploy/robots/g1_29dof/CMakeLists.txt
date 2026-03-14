@@ -11,6 +11,7 @@ pkg_check_modules(ZMQ REQUIRED libzmq)
 include_directories(
   /usr/include/eigen3
   /opt/unitree_robotics/include/ddscxx # dds
+  /opt/unitree_robotics/include             # dds/dds.h
   /opt/unitree_robotics/include/iceoryx/v2.0.2 # dds
   include
   ${PROJECT_SOURCE_DIR}/../../thirdparty/onnxruntime-linux-x64-1.22.0/include
@@ -38,3 +39,11 @@ add_library(${PROJECT_NAME}_lib ${ADD_SRC_LIST})
 link_libraries(${PROJECT_NAME}_lib)
 
 add_executable(g1_ctrl main.cpp)
+
+# Use RPATH (not RUNPATH) so /opt/unitree_robotics/lib/libddsc.so.0
+# wins over ROS Humble LD_LIBRARY_PATH → prevents ABI mismatch crash.
+set_target_properties(g1_ctrl PROPERTIES
+  BUILD_RPATH   "/opt/unitree_robotics/lib"
+  INSTALL_RPATH "/opt/unitree_robotics/lib"
+)
+target_link_options(g1_ctrl PRIVATE "LINKER:--disable-new-dtags")

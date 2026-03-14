@@ -10,8 +10,7 @@ find_package(Boost REQUIRED COMPONENTS system)
 find_package(cppzmq QUIET)
 
 include_directories(
-  /usr/local/include/ddscxx
-  /usr/local/include/iceoryx/v2.0.2
+  ${UNITREE_SDK2_DIR}/thirdparty/include/ddscxx
   ${UNITREE_SDK2_DIR}/thirdparty/include
   /usr/local/include
 )
@@ -36,3 +35,5 @@ set_target_properties(g1_ws_bridge PROPERTIES
   BUILD_RPATH   "${DDS_LIB_DIR}"
   INSTALL_RPATH "${DDS_LIB_DIR}"
 )
+# Use RPATH (not RUNPATH) so bundled libddsc.so.0 wins over ROS LD_LIBRARY_PATH
+target_link_options(g1_ws_bridge PRIVATE "LINKER:--disable-new-dtags")

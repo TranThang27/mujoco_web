@@ -30,46 +30,68 @@ Simply ensure `npm` is installed and run `npm install` to pull three.js and MuJo
 
 To serve and run the index.html page while developing, use an HTTP Server.  I like to use [five-server](https://github.com/yandeu/five-server).
 
-## JavaScript API
+## How to Run with Docker (Recommended)
 
-```javascript
-import load_mujoco from "./dist/mujoco_wasm.js";
+By using Docker, you can instantly build and launch the server, websocket bridge, and controller without installing dependencies on your host.
 
-// Load the MuJoCo Module
-const mujoco = await load_mujoco();
-
-// Set up Emscripten's Virtual File System
-mujoco.FS.mkdir('/working');
-mujoco.FS.mount(mujoco.MEMFS, { root: '.' }, '/working');
-mujoco.FS.writeFile("/working/humanoid.xml", await (await fetch("./assets/scenes/humanoid.xml")).text());
-
-// Load model and create data
-let model = mujoco.MjModel.loadFromXML("/working/humanoid.xml");
-let data  = new mujoco.MjData(model);
-
-// Access model properties directly
-let timestep = model.opt.timestep;
-let nbody = model.nbody;
-
-// Access data buffers (typed arrays)
-let qpos = data.qpos;  // Joint positions
-let qvel = data.qvel;  // Joint velocities
-let ctrl = data.ctrl;  // Control inputs
-let xpos = data.xpos;  // Body positions
-
-// Step the simulation
-mujoco.mj_step(model, data);
-
-// Run forward kinematics
-mujoco.mj_forward(model, data);
-
-// Reset simulation
-mujoco.mj_resetData(model, data);
-
-// Apply forces (force, torque, point, body, qfrc_target)
-mujoco.mj_applyFT(model, data, [fx, fy, fz], [tx, ty, tz], [px, py, pz], bodyId, data.qfrc_applied);
-
-// Clean up
-data.delete();
-model.delete();
+1) Build the image
+```bash
+docker build -t mujoco_wasm_env .
 ```
+
+2) Run the container
+```bash
+docker run -p 5500:5500 -p 8765:8765 -it mujoco_wasm_env
+```
+
+3) Open `http://localhost:5500` in your web browser.
+
+## How to Run Manually (Linux)
+
+1) Install unitree rl lab and set up the environment
+
+```bash
+sudo apt install -y libyaml-cpp-dev libboost-all-dev libeigen3-dev libspdlog-dev libfmt-dev
+# Install unitree_sdk2
+# Note: from the root mujoco_wasm folder
+git clone https://github.com/unitreerobotics/unitree_sdk2.git unitree_rl_lab/unitree_sdk2
+cd unitree_rl_lab/unitree_sdk2
+mkdir build && cd build
+cmake .. -DBUILD_EXAMPLES=OFF # Install on the /usr/local directory
+sudo make install
+
+# Build g1_29dof controller
+cd ../deploy/robots/g1_29dof
+mkdir build && cd build
+cmake .. && make
+```
+
+2) Build g1_ws_bridge
+
+```bash
+# from the root mujoco_wasm folder
+cd unitree_rl_lab/deploy/g1_ws_bridge
+mkdir build && cd build
+cmake .. && make
+```
+
+3) Run with 3 terminals (from the root folder):
+
+**Terminal 1 (Controller):**
+```bash
+cd unitree_rl_lab/deploy/robots/g1_29dof/build
+./g1_ctrl --network lo
+```
+
+**Terminal 2 (WebSocket Bridge):**
+```bash
+cd unitree_rl_lab/deploy/g1_ws_bridge/build
+./g1_ws_bridge
+```
+
+**Terminal 3 (Web Server):**
+```bash
+npm install
+five-server . 
+```
+
